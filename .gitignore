@@ -18,3 +18,10 @@ __pycache__/
 # Local/system files
 .DS_Store
 Thumbs.db
+archive/
+evaluation/cache/
+face_recognition/*.sqlite
+evaluation/output/
+evaluation/logs/
+*.csv
+*.pkl

@@ -72,18 +72,30 @@ class LivenessSDK:
             passive_spoof_threshold=self.passive_spoof_threshold,
             min_reliability_size=int(self.min_face_size_target)
         )
+        self.last_fqa_result = None
+        self.mp_detector = None
+        self.mp_model_path = self.config.get("mp_model_path", "face_recognition/face_landmarker.task")
 
     def reset(self) -> None:
         """
         Resets active challenge sequences, timers, and passive history buffers.
         """
         self.decision_engine.reset()
+        self.last_fqa_result = None
+
+    def close(self) -> None:
+        """
+        Releases background resources (e.g. MediaPipe FaceLandmarker).
+        """
+        if self.mp_detector is not None:
+            self.mp_detector.close()
+            self.mp_detector = None
 
     def process_frame(
         self,
         frame: np.ndarray,
-        bbox: Tuple[int, int, int, int],
-        landmarks: Optional[np.ndarray],
+        bbox: Optional[Tuple[int, int, int, int]] = None,
+        landmarks: Optional[np.ndarray] = None,
         tracking_confidence: float = 1.0,
         timestamp: Optional[float] = None
     ) -> Dict[str, Any]:
@@ -92,8 +104,8 @@ class LivenessSDK:
 
         Args:
             frame (np.ndarray): Original BGR camera frame.
-            bbox (Tuple[int, int, int, int]): Face bounding box (x, y, w, h).
-            landmarks (np.ndarray): MediaPipe landmarks array.
+            bbox (Tuple[int, int, int, int]): Optional face bounding box (x, y, w, h).
+            landmarks (np.ndarray): Optional MediaPipe landmarks array.
             tracking_confidence (float): Face tracking confidence (0.0 to 1.0).
             timestamp (float, optional): Precision epoch or frame timestamp.
 
@@ -108,6 +120,22 @@ class LivenessSDK:
         # ==========================================
         if frame is None or not isinstance(frame, np.ndarray) or frame.size == 0:
             return self._build_error_response(errors.FACE_NOT_DETECTED)
+
+        # MediaPipe Face Mesh Auto-detection (default production path if missing)
+        if landmarks is None or bbox is None:
+            if self.mp_detector is None:
+                from .landmarks import MediaPipeLandmarkDetector
+                try:
+                    self.mp_detector = MediaPipeLandmarkDetector(model_path=self.mp_model_path)
+                except Exception:
+                    return self._build_error_response(errors.FACE_NOT_DETECTED)
+            
+            res_det = self.mp_detector.detect_landmarks(frame)
+            if res_det is None:
+                return self._build_error_response(errors.FACE_NOT_DETECTED)
+            bbox = res_det["face_bbox"]
+            landmarks = res_det["landmarks"]
+
         if landmarks is None or len(landmarks) < 400:
             return self._build_error_response(errors.FACE_NOT_DETECTED)
         if bbox is None or len(bbox) != 4:
@@ -128,10 +156,15 @@ class LivenessSDK:
             lms = np.array(landmarks, dtype=np.float32)
             # In the image space, 'left_eye' for the alignment/FQA engine must be the eye on the left side of the image (smaller x coordinate).
             # 'right_eye' must be the eye on the right side of the image (larger x coordinate).
-            # landmarks[362]/[263] are on the left side of the image (x ~ 0.40).
-            # landmarks[33]/[133] are on the right side of the image (x ~ 0.60).
-            left_img_pt = (lms[362][:2] + lms[263][:2]) / 2.0
-            right_img_pt = (lms[33][:2] + lms[133][:2]) / 2.0
+            pt_a = (lms[33][:2] + lms[133][:2]) / 2.0
+            pt_b = (lms[362][:2] + lms[263][:2]) / 2.0
+
+            if pt_a[0] < pt_b[0]:
+                left_img_pt = pt_a
+                right_img_pt = pt_b
+            else:
+                left_img_pt = pt_b
+                right_img_pt = pt_a
 
             left_eye = (float(left_img_pt[0] * img_w), float(left_img_pt[1] * img_h))
             right_eye = (float(right_img_pt[0] * img_w), float(right_img_pt[1] * img_h))
@@ -147,6 +180,7 @@ class LivenessSDK:
             right_eye=right_eye,
             face_bbox=bbox
         )
+        self.last_fqa_result = fqa_res
 
         if not fqa_res.get("success"):
             err = fqa_res.get("error")

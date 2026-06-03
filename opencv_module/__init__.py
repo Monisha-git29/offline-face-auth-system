@@ -21,6 +21,8 @@ from .challenge import ChallengeEngine
 from .antispoof import PassiveAntiSpoofEngine
 from .decision import LivenessDecisionEngine
 from .sdk import LivenessSDK
+from .recognition import FaceRecognizer, SQLiteFaceRegistry, FaceAuthSDK
+from .landmarks import MediaPipeLandmarkDetector
 
 __all__ = [
     "FaceAligner",
@@ -33,5 +35,9 @@ __all__ = [
     "ChallengeEngine",
     "PassiveAntiSpoofEngine",
     "LivenessDecisionEngine",
-    "LivenessSDK"
+    "LivenessSDK",
+    "FaceRecognizer",
+    "SQLiteFaceRegistry",
+    "FaceAuthSDK",
+    "MediaPipeLandmarkDetector"
 ]
