@@ -1,0 +1,31 @@
+# Ignore generated proposal ZIP/RAR archives
+*.zip
+*.rar
+
+# Ignore compiled Android binary files (APKs)
+*.apk
+
+# Ignore all PowerPoint presentations
+*.pptx
+*.ppt
+~$*
+
+# React Native, Node, and Android build outputs (in any subdirectory)
+**/node_modules/
+**/build/
+**/.gradle/
+**/.kotlin/
+**/.cxx/
+**/Pods/
+/node_modules/
+/build/
+/.gradle/
+/.kotlin/
+/.cxx/
+/Pods/
+
+# OS/IDE system files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
