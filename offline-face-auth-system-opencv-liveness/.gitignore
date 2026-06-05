@@ -1,0 +1,27 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Log files
+*.log
+
+# Caches and runtime
+.pytest_cache/
+.ipynb_checkpoints/
+.cache/
+.vs/
+.idea/
+.vscode/
+
+# Local/system files
+.DS_Store
+Thumbs.db
+archive/
+evaluation/cache/
+face_recognition/*.sqlite
+evaluation/output/
+evaluation/logs/
+*.csv
+*.pkl

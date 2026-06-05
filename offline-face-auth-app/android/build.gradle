@@ -1,0 +1,51 @@
+buildscript {
+    ext {
+        buildToolsVersion = "36.0.0"
+        minSdkVersion = 24
+        compileSdkVersion = 36
+        targetSdkVersion = 36
+        ndkVersion = "27.1.12297006"
+        kotlinVersion = "2.1.20"
+    }
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath("com.android.tools.build:gradle")
+        classpath("com.facebook.react:react-native-gradle-plugin")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin")
+    }
+}
+
+apply plugin: "com.facebook.react.rootproject"
+
+subprojects { subproj ->
+    def configureProject = { p ->
+        if (p.hasProperty("android")) {
+            p.android {
+                defaultConfig {
+                    ndk {
+                        abiFilters "arm64-v8a"
+                    }
+                    try {
+                        externalNativeBuild {
+                            cmake {
+                                cppFlags "-frtti", "-fexceptions", "-Wall", "-Wextra", "-g0", "-ftemplate-depth=512"
+                            }
+                        }
+                    } catch (Exception e) {}
+                }
+            }
+        }
+    }
+    if (subproj.state.executed) {
+        configureProject(subproj)
+    } else {
+        subproj.afterEvaluate { configureProject(subproj) }
+    }
+}
+
+
+
+
